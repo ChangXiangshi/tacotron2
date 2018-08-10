@@ -1,13 +1,13 @@
-import numpy as np 
 import os
 import threading
 import time
 import traceback
-from tacotron.utils.text import text_to_sequence
+
+import numpy as np
+import tensorflow as tf
 from infolog import log
 from sklearn.model_selection import train_test_split
-import tensorflow as tf 
-
+from tacotron.utils.text import text_to_sequence
 
 _batches_per_group = 32
 
@@ -37,7 +37,7 @@ class Feeder:
 		if hparams.tacotron_test_size is None:
 			assert hparams.tacotron_test_batches is not None
 
-		test_size = (hparams.tacotron_test_size if hparams.tacotron_test_size is not None 
+		test_size = (hparams.tacotron_test_size if hparams.tacotron_test_size is not None
 			else hparams.tacotron_test_batches * hparams.tacotron_batch_size)
 		indices = np.arange(len(self._metadata))
 		train_indices, test_indices = train_test_split(indices,
@@ -225,10 +225,10 @@ class Feeder:
 	def _pad_token_target(self, t, length):
 		return np.pad(t, (0, length - t.shape[0]), mode='constant', constant_values=self._token_pad)
 
-	def _round_down(self, x, multiple):
-		remainder = x % multiple
-		return x if remainder == 0 else x - remainder
-		
 	def _round_up(self, x, multiple):
 		remainder = x % multiple
 		return x if remainder == 0 else x + multiple - remainder
+
+	def _round_down(self, x, multiple):
+		remainder = x % multiple
+		return x if remainder == 0 else x - remainder

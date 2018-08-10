@@ -1,6 +1,5 @@
-import tensorflow as tf 
-import numpy as np 
-
+import numpy as np
+import tensorflow as tf
 
 # Default hyperparameters
 hparams = tf.contrib.training.HParams(
@@ -20,7 +19,7 @@ hparams = tf.contrib.training.HParams(
 	rescaling_max = 0.999, #Rescaling value
 	trim_silence = True, #Whether to clip silence in Audio (at beginning and end of audio only, not the middle)
 	clip_mels_length = True, #For cases of OOM (Not really recommended, working on a workaround)
-	max_mel_frames = 1100,  #Only relevant when clip_mels_length = True
+	max_mel_frames = 1300,  #Only relevant when clip_mels_length = True
 
 	# Use LWS (https://github.com/Jonathan-LeRoux/lws) for STFT and phase reconstruction
 	# It's preferred to set True to use with https://github.com/r9y9/wavenet_vocoder
@@ -44,16 +43,17 @@ hparams = tf.contrib.training.HParams(
 	signal_normalization = True,
 	allow_clipping_in_normalization = True, #Only relevant if mel_normalization = True
 	symmetric_mels = False, #Whether to scale the data to be symmetric around 0
-	max_abs_value = 4., #max absolute value of data. If symmetric, data will be [-max, max] else [0, max] 
+	max_abs_value = 4., #max absolute value of data. If symmetric, data will be [-max, max] else [0, max]
+	normalize_for_wavenet = True, #whether to rescale to [0, 1] for wavenet.
 
 	#Limits
 	min_level_db = -100,
 	ref_level_db = 20,
 	fmin = 0, #Set this to 75 if your speaker is male! if female, 125 should help taking off noise. (To test depending on dataset)
-	fmax = 7600, 
+	fmax = 7600,
 
 	#Griffin Lim
-	power = 1.5, 
+	power = 1.5,
 	griffin_lim_iters = 60,
 	###########################################################################################################################################
 
@@ -68,7 +68,7 @@ hparams = tf.contrib.training.HParams(
 	enc_conv_channels = 512, #number of encoder convolutions filters for each layer
 	encoder_lstm_units = 256, #number of lstm units for each direction (forward and backward)
 
-	smoothing = False, #Whether to smooth the attention normalization function 
+	smoothing = False, #Whether to smooth the attention normalization function
 	attention_dim = 128, #dimension of attention space
 	attention_filters = 32, #number of attention convolution filters
 	attention_kernel = (31, ), #kernel size of attention convolution
@@ -103,8 +103,10 @@ hparams = tf.contrib.training.HParams(
 	quantize_channels=65536,  # 65536 (16-bit) (raw) or 256 (8-bit) (mulaw or mulaw-quantize) // number of classes = 256 <=> mu = 255
 
 	log_scale_min=float(np.log(1e-14)), #Mixture of logistic distributions minimal log scale
+	log_scale_min_gauss = float(np.log(1e-7)), #Gaussian distribution minimal allowed log scale
 
-	out_channels = 10 * 3, #This should be equal to quantize channels when input type is 'mulaw-quantize' else: num_distributions * 3 (prob, mean, log_scale)
+	#To use Gaussian distribution as output distribution instead of mixture of logistics sets "out_channels = 2" instead of "out_channels = 10 * 3". (UNDER TEST)
+	out_channels = 2, #This should be equal to quantize channels when input type is 'mulaw-quantize' else: num_distributions * 3 (prob, mean, log_scale).
 	layers = 30, #Number of dilated convolutions (Default: Simplified Wavenet of Tacotron-2 paper)
 	stacks = 3, #Number of dilated convolution stacks (Default: Simplified Wavenet of Tacotron-2 paper)
 	residual_channels = 512,
@@ -114,12 +116,13 @@ hparams = tf.contrib.training.HParams(
 
 	cin_channels = 80, #Set this to -1 to disable local conditioning, else it must be equal to num_mels!!
 	upsample_conditional_features = True, #Whether to repeat conditional features or upsample them (The latter is recommended)
-	upsample_scales = [5, 5, 4, 3], #prod(scales) should be equal to hop size
+	upsample_scales = [15, 20], #prod(scales) should be equal to hop size
 	freq_axis_kernel_size = 3,
+	leaky_alpha = 0.4,
 
-	gin_channels = -1, #Set this to -1 to disable global conditioning, Only used for multi speaker dataset. It defines the depth of the embeddings (Recommended: 512)
+	gin_channels = -1, #Set this to -1 to disable global conditioning, Only used for multi speaker dataset. It defines the depth of the embeddings (Recommended: 16)
 	use_speaker_embedding = True, #whether to make a speaker embedding
-	n_speakers = 6, #number of speakers (rows of the embedding)
+	n_speakers = 5, #number of speakers (rows of the embedding)
 
 	use_bias = True, #Whether to use bias in convolutional layers of the Wavenet
 
@@ -188,7 +191,7 @@ hparams = tf.contrib.training.HParams(
 	wavenet_ema_decay = 0.9999, #decay rate of exponential moving average
 
 	wavenet_dropout = 0.05, #drop rate of wavenet layers
-	train_with_GTA = False, #Whether to use GTA mels to train WaveNet instead of ground truth mels.
+	train_with_GTA = True, #Whether to use GTA mels to train WaveNet instead of ground truth mels.
 	###########################################################################################################################################
 
 	#Eval sentences (if no eval file was specified, these sentences are used for eval)
@@ -224,10 +227,10 @@ hparams = tf.contrib.training.HParams(
 	'it appears that oswald had only one caller in response to all of his fpcc activities,',
 	'he relied on the absence of the strychnia.',
 	'scoggins thought it was lighter.',
-	'''would, it is probable, have eventually overcome the reluctance of some of the prisoners at least, 
+	'''would, it is probable, have eventually overcome the reluctance of some of the prisoners at least,
 	and would have possessed so much moral dignity''',
-	'''Sequence to sequence models have enjoyed great success in a variety of tasks such as machine translation, speech recognition, and text summarization. 
-	This project covers a sequence to sequence model trained to predict a speech representation from an input sequence of characters. We show that 
+	'''Sequence to sequence models have enjoyed great success in a variety of tasks such as machine translation, speech recognition, and text summarization.
+	This project covers a sequence to sequence model trained to predict a speech representation from an input sequence of characters. We show that
 	the adopted architecture is able to perform this task with wild success.''',
 	'Thank you so much for your support!',
 	]

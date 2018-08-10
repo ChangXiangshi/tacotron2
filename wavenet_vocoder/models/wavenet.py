@@ -1,12 +1,13 @@
-import numpy as np 
-import tensorflow as tf 
-
-from .modules import Conv1d1x1, ResidualConv1dGLU, ConvTranspose2d, Embedding, ReluActivation, DiscretizedMixtureLogisticLoss, MaskedCrossEntropyLoss
-from .mixture import sample_from_discretized_mix_logistic
-from wavenet_vocoder.util import *
+import numpy as np
+import tensorflow as tf
+from datasets import audio
 from infolog import log
 from wavenet_vocoder import util
-from datasets import audio
+from wavenet_vocoder.util import *
+
+from .gaussian import sample_from_gaussian
+from .mixture import sample_from_discretized_mix_logistic
+from .modules import Conv1d1x1, ConvTranspose2d, DiscretizedMixtureLogisticLoss, Embedding, GaussianMaximumLikelihoodEstimation, LeakyReluActivation, MaskedCrossEntropyLoss, ReluActivation, ResidualConv1dGLU
 
 
 def _expand_global_features(batch_size, time_length, global_features, data_format='BCT'):
@@ -101,7 +102,7 @@ class WaveNet():
 				kernel_size=hparams.kernel_size,
 				skip_out_channels=hparams.skip_out_channels,
 				use_bias=hparams.use_bias,
-				dilation=2**(layer % layers_per_stack), 
+				dilation=2**(layer % layers_per_stack),
 				dropout=hparams.wavenet_dropout,
 				cin_channels=hparams.cin_channels,
 				gin_channels=hparams.gin_channels,
@@ -130,10 +131,12 @@ class WaveNet():
 			self.upsample_conv = []
 			for i, s in enumerate(hparams.upsample_scales):
 				with tf.variable_scope('local_conditioning_upsampling_{}'.format(i+1)):
-					convt = ConvTranspose2d(1, (hparams.freq_axis_kernel_size ,s),
+					convt = ConvTranspose2d(1, (hparams.freq_axis_kernel_size, 2 * s),
 						padding='same', strides=(1, s))
 					self.upsample_conv.append(convt)
-					ReluActivation(name='upsample_relu_{}'.format(i+1))
+					self.upsample_conv.append(LeakyReluActivation(alpha=hparams.leaky_alpha,
+						name='upsample_leaky_relu_{}'.format(i+1)))
+					#self.upsample_conv.append(ReluActivation(name='upsample_relu_{}'.format(i+1)))
 
 			self.all_convs += self.upsample_conv
 		else:
@@ -180,6 +183,13 @@ class WaveNet():
 				self.y = y
 				self.input_lengths = input_lengths
 
+				#Add mean and scale stats if using Guassian distribution output (there would be too many logistics if using MoL)
+				if self._hparams.out_channels == 2:
+					self.means = self.y_hat[:, 0, :]
+					self.log_scales = self.y_hat[:, 1, :]
+				else:
+					self.means = None
+
 				#Graph extension for log saving
 				#[batch_size, time_length]
 				shape_control = (batch_size, tf.shape(x)[-1], 1)
@@ -202,8 +212,12 @@ class WaveNet():
 
 				else:
 					#[batch_size, time_length]
-					y_hat_log = sample_from_discretized_mix_logistic(
-						y_hat_log, log_scale_min=hparams.log_scale_min)
+					if hparams.out_channels == 2:
+						y_hat_log = sample_from_gaussian(
+							y_hat_log, log_scale_min_gauss=hparams.log_scale_min_gauss)
+					else:
+						y_hat_log = sample_from_discretized_mix_logistic(
+							y_hat_log, log_scale_min=hparams.log_scale_min)
 
 					if is_mulaw(hparams.input_type):
 						y_hat_log = util.inv_mulaw(y_hat_log, hparams.quantize_channels)
@@ -211,7 +225,7 @@ class WaveNet():
 
 				self.y_hat_log = y_hat_log
 				self.y_log = y_log
-				
+
 				log('  inputs:                    {}'.format(x.shape))
 				if self.local_conditioning_enabled():
 					log('  local_condition:           {}'.format(c.shape))
@@ -222,7 +236,7 @@ class WaveNet():
 
 
 			#evaluating
-			elif self.is_evaluating: 
+			elif self.is_evaluating:
 				#[time_length, ]
 				idx = 0
 				length = input_lengths[idx]
@@ -352,12 +366,18 @@ class WaveNet():
 				if is_mulaw_quantize(self._hparams.input_type):
 					self.loss = MaskedCrossEntropyLoss(self.y_hat_q[:, :-1, :], self.y[:, 1:], mask=self.mask)
 				else:
-					self.loss = DiscretizedMixtureLogisticLoss(self.y_hat[:, :, :-1], self.y[:, 1:, :], hparams=self._hparams, mask=self.mask)
+					if self._hparams.out_channels == 2:
+						self.loss = GaussianMaximumLikelihoodEstimation(self.y_hat[:, :, :-1], self.y[:, 1:, :], hparams=self._hparams, mask=self.mask)
+					else:
+						self.loss = DiscretizedMixtureLogisticLoss(self.y_hat[:, :, :-1], self.y[:, 1:, :], hparams=self._hparams, mask=self.mask)
 			elif self.is_evaluating:
 				if is_mulaw_quantize(self._hparams.input_type):
 					self.eval_loss = MaskedCrossEntropyLoss(self.y_hat_eval, self.y_eval, lengths=[self.eval_length])
 				else:
-					self.eval_loss = DiscretizedMixtureLogisticLoss(self.y_hat_eval, self.y_eval, hparams=self._hparams, lengths=[self.eval_length])
+					if self._hparams.out_channels == 2:
+						self.eval_loss = GaussianMaximumLikelihoodEstimation(self.y_hat_eval, self.y_eval, hparams=self._hparams, lengths=[self.eval_length])
+					else:
+						self.eval_loss = DiscretizedMixtureLogisticLoss(self.y_hat_eval, self.y_eval, hparams=self._hparams, lengths=[self.eval_length])
 
 
 	def add_optimizer(self, global_step):
@@ -368,6 +388,7 @@ class WaveNet():
 
 			#Adam with constant learning rate
 			learning_rate = self._noam_learning_rate_decay(hp.wavenet_learning_rate, global_step)
+			self.learning_rate = learning_rate
 			optimizer = tf.train.AdamOptimizer(learning_rate, hp.wavenet_adam_beta1,
 				hp.wavenet_adam_beta2, hp.wavenet_adam_epsilon)
 
@@ -419,9 +440,9 @@ class WaveNet():
 		Args:
 			x: Tensor of shape [batch_size, channels, time_length], One-hot encoded audio signal.
 			c: Tensor of shape [batch_size, cin_channels, time_length], Local conditioning features.
-			g: Tensor of shape [batch_size, gin_channels, 1] or Ids of shape [batch_size, 1], 
+			g: Tensor of shape [batch_size, gin_channels, 1] or Ids of shape [batch_size, 1],
 				Global conditioning features.
-				Note: set hparams.use_speaker_embedding to False to disable embedding layer and 
+				Note: set hparams.use_speaker_embedding to False to disable embedding layer and
 				use extrnal One-hot encoded features.
 			softmax: Boolean, Whether to apply softmax.
 
@@ -474,7 +495,7 @@ class WaveNet():
 
 	def incremental(self, initial_input, c=None, g=None,
 		time_length=100, test_inputs=None,
-		softmax=True, quantize=True, log_scale_min=-7.0):
+		softmax=True, quantize=True, log_scale_min=-7.0, log_scale_min_gauss=-7.0):
 		"""Inceremental forward step
 
 		Inputs of shape [batch_size, channels, time_length] are reshaped to [batch_size, time_length, channels]
@@ -548,7 +569,7 @@ class WaveNet():
 		initial_outputs_ta = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
 		initial_loss_outputs_ta = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
 		#Only use convolutions queues for Residual Blocks main convolutions (only ones with kernel size 3 and dilations, all others are 1x1)
-		initial_queues = [tf.zeros((batch_size, res_conv.conv.kw + (res_conv.conv.kw - 1) * (res_conv.conv.dilation_rate - 1), res_conv.conv.in_channels), 
+		initial_queues = [tf.zeros((batch_size, res_conv.conv.kw + (res_conv.conv.kw - 1) * (res_conv.conv.dilation_rate - 1), res_conv.conv.in_channels),
 			name='convolution_queue_{}'.format(i+1)) for i, res_conv in enumerate(self.conv_layers)]
 
 		def condition(time, unused_outputs_ta, unused_current_input, unused_loss_outputs_ta, unused_queues):
@@ -580,8 +601,13 @@ class WaveNet():
 
 			#Generate next input by sampling
 			if self.scalar_input:
-				x = sample_from_discretized_mix_logistic(
-					tf.reshape(x, [batch_size, -1, 1]), log_scale_min=log_scale_min)
+				if self._hparams.out_channels == 2:
+					x = sample_from_gaussian(
+						tf.reshape(x, [batch_size, -1, 1]),
+						log_scale_min_gauss=log_scale_min_gauss)
+				else:
+					x = sample_from_discretized_mix_logistic(
+						tf.reshape(x, [batch_size, -1, 1]), log_scale_min=log_scale_min)
 			else:
 				x = tf.nn.softmax(tf.reshape(x, [batch_size, -1]), axis=1) if softmax \
 					else tf.reshape(x, [batch_size, -1])

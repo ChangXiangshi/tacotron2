@@ -1,7 +1,10 @@
-import numpy as np 
-import tensorflow as tf 
+import numpy as np
+import tensorflow as tf
 from wavenet_vocoder.util import sequence_mask
+
+from .gaussian import gaussian_maximum_likelihood_estimation_loss
 from .mixture import discretized_mix_logistic_loss
+
 
 class Embedding:
 	"""Embedding class for global conditions.
@@ -17,13 +20,24 @@ class Embedding:
 		return tf.nn.embedding_lookup(self.embedding_table, inputs)
 
 class ReluActivation:
-	"""Simple class to wrap relu activation function in classe for later call.
+	"""Simple class to wrap relu activation function in class for later call.
 	"""
 	def __init__(self, name=None):
 		self.name = name
 
 	def __call__(self, inputs):
 		return tf.nn.relu(inputs, name=self.name)
+
+
+class LeakyReluActivation:
+	'''Simple class to wrap leaky relu activation function in class for later call.
+	'''
+	def __init__(self, alpha=0.3, name=None):
+		self.alpha = alpha
+		self.name = name
+
+	def __call__(self, inputs):
+		return tf.nn.leaky_relu(inputs, alpha=self.alpha, name=self.name)
 
 
 class Conv1d1x1(tf.layers.Conv1D):
@@ -87,7 +101,7 @@ class Conv1d1x1(tf.layers.Conv1D):
 			width = inputs_shape[-1]
 			channels = inputs_shape[1]
 			#width_pad = inputs_shape[-1]
-			width_pad = tf.cast(self.dilation_rate * (tf.ceil(tf.cast(width + self.dilation_rate, tf.float32) / self.dilation_rate) + tf.cast(self.kw - 2, tf.float32)), 
+			width_pad = tf.cast(self.dilation_rate * (tf.ceil(tf.cast(width + self.dilation_rate, tf.float32) / self.dilation_rate) + tf.cast(self.kw - 2, tf.float32)),
 				tf.int32)
 			pad_left = width_pad - width
 
@@ -138,7 +152,7 @@ class Conv1d1x1(tf.layers.Conv1D):
 			cropped = tf.transpose(inputs, [0, 2, 1])
 
 		return cropped
-		
+
 
 	def __call__(self, inputs):
 		'''During this call, we change to channel last scheme for a better generalization and easier bias computation
@@ -172,7 +186,7 @@ class Conv1d1x1(tf.layers.Conv1D):
 		'''
 		with tf.variable_scope(self.scope):
 			#input: [batch_size, time_length, channels]
-			if self.training: 
+			if self.training:
 				raise RuntimeError('incremental_step only supports eval mode')
 
 			batch_size = tf.shape(inputs)[0]
@@ -181,7 +195,7 @@ class Conv1d1x1(tf.layers.Conv1D):
 			if self.kw > 1:
 				#shift queue (remove first element for following append)
 				convolution_queue = convolution_queue[:, 1:, :]
-				
+
 				#append next input
 				convolution_queue = tf.concat([convolution_queue, tf.expand_dims(inputs[:, -1, :], axis=1)], axis=1)
 
@@ -243,7 +257,7 @@ class ResidualConv1dGLU():
 
 		#Global conditioning
 		if gin_channels > 0:
-			self.conv1x1g = Conv1d1x1(gin_channels, gate_channels, 
+			self.conv1x1g = Conv1d1x1(gin_channels, gate_channels,
 				use_bias=use_bias, name='residual_block_gin_conv_{}'.format(name))
 		else:
 			self.conv1x1g = None
@@ -348,7 +362,7 @@ def MaskedCrossEntropyLoss(outputs, targets, lengths=None, mask=None, max_len=No
 
 	#One hot encode targets (outputs.shape[-1] = hparams.quantize_channels)
 	targets_ = tf.one_hot(targets, depth=tf.shape(outputs)[-1])
-	
+
 	with tf.control_dependencies([tf.assert_equal(tf.shape(outputs), tf.shape(targets_))]):
 		losses = tf.nn.softmax_cross_entropy_with_logits_v2(logits=outputs, labels=targets_)
 
@@ -372,6 +386,24 @@ def DiscretizedMixtureLogisticLoss(outputs, targets, hparams, lengths=None, mask
 	losses = discretized_mix_logistic_loss(
 		outputs, targets, num_classes=hparams.quantize_channels,
 		log_scale_min=hparams.log_scale_min, reduce=False)
+
+	with tf.control_dependencies([tf.assert_equal(tf.shape(losses), tf.shape(targets))]):
+		return tf.reduce_sum(losses * mask_) / tf.reduce_sum(mask_)
+
+def GaussianMaximumLikelihoodEstimation(outputs, targets, hparams, lengths=None, mask=None, max_len=None):
+	if lengths is None and mask is None:
+		raise RuntimeError('Please provide either lengths or mask')
+
+	#[batch_size, time_length, 1]
+	if mask is None:
+		mask = sequence_mask(lengths, max_len, True)
+
+	#[batch_size, time_length, dimension]
+	ones = tf.ones([tf.shape(mask)[0], tf.shape(mask)[1], tf.shape(targets)[-1]], tf.float32)
+	mask_ = mask * ones
+
+	losses = gaussian_maximum_likelihood_estimation_loss(
+		outputs, targets, log_scale_min_gauss=hparams.log_scale_min_gauss, reduce=False)
 
 	with tf.control_dependencies([tf.assert_equal(tf.shape(losses), tf.shape(targets))]):
 		return tf.reduce_sum(losses * mask_) / tf.reduce_sum(mask_)
