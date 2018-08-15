@@ -100,12 +100,12 @@ hparams = tf.contrib.training.HParams(
 	# discretized mixture of logistic distributions output, otherwise one-hot
 	# input and softmax output are assumed.
 	input_type="raw",
-	quantize_channels=65536,  # 65536 (16-bit) (raw) or 256 (8-bit) (mulaw or mulaw-quantize) // number of classes = 256 <=> mu = 255
+	quantize_channels=2 ** 16,  # 65536 (16-bit) (raw) or 256 (8-bit) (mulaw or mulaw-quantize) // number of classes = 256 <=> mu = 255
 
 	log_scale_min=float(np.log(1e-14)), #Mixture of logistic distributions minimal log scale
 	log_scale_min_gauss = float(np.log(1e-7)), #Gaussian distribution minimal allowed log scale
 
-	#To use Gaussian distribution as output distribution instead of mixture of logistics sets "out_channels = 2" instead of "out_channels = 10 * 3". (UNDER TEST)
+	#To use Gaussian distribution as output distribution instead of mixture of logistics, set "out_channels = 2" instead of "out_channels = 10 * 3". (UNDER TEST)
 	out_channels = 2, #This should be equal to quantize channels when input type is 'mulaw-quantize' else: num_distributions * 3 (prob, mean, log_scale).
 	layers = 30, #Number of dilated convolutions (Default: Simplified Wavenet of Tacotron-2 paper)
 	stacks = 3, #Number of dilated convolution stacks (Default: Simplified Wavenet of Tacotron-2 paper)
@@ -116,7 +116,7 @@ hparams = tf.contrib.training.HParams(
 
 	cin_channels = 80, #Set this to -1 to disable local conditioning, else it must be equal to num_mels!!
 	upsample_conditional_features = True, #Whether to repeat conditional features or upsample them (The latter is recommended)
-	upsample_scales = [15, 20], #prod(scales) should be equal to hop size
+	upsample_scales = [15, 20], #prod(upsample_scales) should be equal to hop_size
 	freq_axis_kernel_size = 3,
 	leaky_alpha = 0.4,
 
@@ -127,7 +127,7 @@ hparams = tf.contrib.training.HParams(
 	use_bias = True, #Whether to use bias in convolutional layers of the Wavenet
 
 	max_time_sec = None,
-	max_time_steps = 8000, #Max time steps in audio used to train wavenet (decrease to save memory)
+	max_time_steps = 13000, #Max time steps in audio used to train wavenet (decrease to save memory) (Recommend: 8000 on modest GPUs, 13000 on stronger ones)
 	###########################################################################################################################################
 
 	#Tacotron Training
@@ -142,9 +142,12 @@ hparams = tf.contrib.training.HParams(
 	tacotron_test_batches = 32, #number of test batches (For Ljspeech: 10% ~= 41 batches of 32 samples)
 	tacotron_data_random_state=1234, #random state for train test split repeatability
 
+	#Usually your GPU can handle 16x tacotron_batch_size during synthesis for the same memory amount during training (because no gradients to keep and ops to register for backprop)
+	tacotron_synthesis_batch_size = 32 * 16, #This ensures GTA synthesis goes up to 40x faster than one sample at a time and uses 100% of your GPU computation power.
+
 	tacotron_decay_learning_rate = True, #boolean, determines if the learning rate will follow an exponential decay
-	tacotron_start_decay = 40000, #Step at which learning decay starts
-	tacotron_decay_steps = 40000, #Determines the learning rate decay slope (UNDER TEST)
+	tacotron_start_decay = 50000, #Step at which learning decay starts
+	tacotron_decay_steps = 50000, #Determines the learning rate decay slope (UNDER TEST)
 	tacotron_decay_rate = 0.4, #learning rate decay rate (UNDER TEST)
 	tacotron_initial_learning_rate = 1e-3, #starting learning rate
 	tacotron_final_learning_rate = 1e-5, #minimal learning rate
@@ -182,6 +185,10 @@ hparams = tf.contrib.training.HParams(
 	wavenet_test_size = 0.0441, #% of data to keep as test data, if None, wavenet_test_batches must be not None
 	wavenet_test_batches = None, #number of test batches.
 	wavenet_data_random_state = 1234, #random state for train test split repeatability
+
+	#During synthesis, there is no max_time_steps limitation so the model can sample much longer audio than 8k(or 13k) steps. (Audio can go up to 500k steps, equivalent to ~21sec on 24kHz)
+	#Usually your GPU can handle 1x~2x wavenet_batch_size during synthesis for the same memory amount during training (because no gradients to keep and ops to register for backprop)
+	wavenet_synthesis_batch_size = 4 * 2, #This ensure that wavenet synthesis goes up to 4x~8x faster when synthesizing multiple sentences. Watch out for OOM with long audios.
 
 	wavenet_learning_rate = 1e-3,
 	wavenet_adam_beta1 = 0.9,
