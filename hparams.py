@@ -33,6 +33,7 @@ hparams = tf.contrib.training.HParams(
 	win_size = 1100, #For 22050Hz, 1100 ~= 50 ms (If None, win_size = n_fft)
 	sample_rate = 22050, #22050 Hz (corresponding to ljspeech dataset)
 	frame_shift_ms = None,
+	preemphasis = 0.97, # preemphasis coefficient
 
 	#M-AILABS (and other datasets) trim params
 	trim_fft_size = 512,
