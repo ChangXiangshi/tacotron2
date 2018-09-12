@@ -38,7 +38,7 @@ hparams = tf.contrib.training.HParams(
 	#M-AILABS (and other datasets) trim params
 	trim_fft_size = 512,
 	trim_hop_size = 128,
-	trim_top_db = 23,
+	trim_top_db = 60,
 
 	#Mel and Linear spectrograms normalization/scaling and clipping
 	signal_normalization = True,
