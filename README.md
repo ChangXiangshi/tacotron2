@@ -1,8 +1,11 @@
 # Tacotron-2:
 原文档: [README_.md](README_.md)
+
 原仓库：[Tacotron-2](https://github.com/begeekmyfriend/Tacotron-2)
+
 此项目为 Windows（10）修正版，修正Windows中路径、创建目录等问题，并添加了测试服务(demo_server.py)。
-数据集为清华大学开源普通话语料：[data_thchs30](http://www.openslr.org/18) [百度云](http://pan.baidu.com/s/1hqKwE00)
+
+数据集为清华大学开源普通话语料：[data_thchs30](http://www.openslr.org/18)， [百度云](http://pan.baidu.com/s/1hqKwE00)
 
 # 项目结构:
 	Tacotron-2
