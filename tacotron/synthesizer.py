@@ -1,5 +1,6 @@
 import os
 import wave
+import io
 from datetime import datetime
 
 import numpy as np
@@ -149,6 +150,21 @@ class Synthesizer:
 
 		return saved_mels_paths, speaker_ids
 
+	def live(self, text):
+		hparams = self._hparams
+		cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
+		seqs = [np.asarray(text_to_sequence(text, cleaner_names))]
+		input_lengths = [len(seq) for seq in seqs]
+		feed_dict = {
+			self.model.inputs: seqs,
+			self.model.input_lengths: np.asarray(input_lengths, dtype=np.int32),
+		}
+		linear_wavs, linears, mels, alignments = self.session.run([self.linear_wav_outputs, self.linear_outputs, self.mel_outputs, self.alignments], feed_dict=feed_dict)
+		wav = audio.inv_preemphasis(linear_wavs, hparams.preemphasis)
+		out = io.BytesIO()
+		audio.save_wav(wav, out ,sr=hparams.sample_rate)
+		return out.getvalue()
+		
 	def _round_up(self, x, multiple):
 		remainder = x % multiple
 		return x if remainder == 0 else x + multiple - remainder
