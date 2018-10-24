@@ -6,6 +6,8 @@ import numpy as np
 from datasets import audio
 from wavenet_vocoder.util import is_mulaw, is_mulaw_quantize, mulaw, mulaw_quantize
 
+def rep(str):
+    return str.replace('\\','/')
 
 def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12, tqdm=lambda x: x):
 	"""
@@ -30,11 +32,9 @@ def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12
 	futures = []
 	index = 1
 	for input_dir in input_dirs:
-		trn_files = glob.glob(os.path.join(input_dir, 'xmly_record', 'A*', '*.trn'))
-		# trn_files = glob.glob(os.path.join(input_dir, 'guoxuezhihui', 'guoxue_*', '*.trn'))
-		# trn_files += glob.glob(os.path.join(input_dir, 'xuexun', 'xuexun_*', '*.trn'))
+		trn_files = glob.glob(os.path.join(input_dir,"data", '*.trn'))
 		for trn in trn_files:
-			with open(trn) as f:
+			with open(trn,encoding='utf-8') as f:
 				basename = trn[:-4]
 				if basename.endswith('.wav'):
 					# THCHS30
@@ -45,13 +45,13 @@ def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12
 				wav_path = wav_file
 				basename = basename.split('/')[-1]
 				text = f.readline().strip()
-		# with open(os.path.join(input_dir, 'metadata.csv'), encoding='utf-8') as f:
 
-		# 	for line in f:
-		# 		parts = line.strip().split('|')
-		# 		basename = parts[0]
-		# 		wav_path = os.path.join(input_dir, 'wavs', '{}.wav'.format(basename))
-		# 		text = parts[2]
+				mel_dir = rep(mel_dir)
+				linear_dir = rep(linear_dir)
+				wav_dir = rep(wav_dir)
+				wav_path = rep(wav_path)
+				basename = rep(basename)
+
 				futures.append(executor.submit(partial(_process_utterance, mel_dir, linear_dir, wav_dir, basename, wav_path, text, hparams)))
 				index += 1
 
@@ -147,13 +147,23 @@ def _process_utterance(mel_dir, linear_dir, wav_dir, index, wav_path, text, hpar
 	assert len(out) % audio.get_hop_size(hparams) == 0
 	time_steps = len(out)
 
-	# Write the spectrogram and audio to disk
+	# Pre filename
 	audio_filename = 'audio-{}.npy'.format(index)
 	mel_filename = 'mel-{}.npy'.format(index)
-	linear_filename = 'linear-{}.npy'.format(index)
-	np.save(os.path.join(wav_dir, audio_filename), out.astype(out_dtype), allow_pickle=False)
-	np.save(os.path.join(mel_dir, mel_filename), mel_spectrogram.T, allow_pickle=False)
-	np.save(os.path.join(linear_dir, linear_filename), linear_spectrogram.T, allow_pickle=False)
+	linear_filename ='linear-{}.npy'.format(index)
+	audio_filename_full = rep(os.path.join(wav_dir, audio_filename))
+	mel_filename_full = rep(os.path.join(mel_dir, mel_filename))
+	linear_filename_full = rep(os.path.join(linear_dir, linear_filename))
+
+	# Make dir
+	os.makedirs(os.path.dirname(audio_filename_full), exist_ok=True)
+	os.makedirs(os.path.dirname(mel_filename_full), exist_ok=True)
+	os.makedirs(os.path.dirname(linear_filename_full), exist_ok=True)
+
+	# Write the spectrogram and audio to disk
+	np.save(audio_filename_full, out.astype(out_dtype), allow_pickle=False)
+	np.save(mel_filename_full, mel_spectrogram.T, allow_pickle=False)
+	np.save(linear_filename_full, linear_spectrogram.T, allow_pickle=False)
 
 	# Return a tuple describing this training example
 	return (audio_filename, mel_filename, linear_filename, time_steps, mel_frames, text)
