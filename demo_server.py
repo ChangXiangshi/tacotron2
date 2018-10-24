@@ -9,7 +9,7 @@ import argparse
 from pypinyin import pinyin, lazy_pinyin, Style
 
 
-html_body = '''<html><title>Demo</title><meta charset='utf-8'>
+html_body = '''<html><title>Tcotron-2 Demo</title><meta charset='utf-8'>
 <style>
 body {padding: 16px; font-family: sans-serif; font-size: 14px; color: #444}
 input {font-size: 14px; padding: 8px 12px; outline: none; border: 1px solid #ddd}
@@ -62,7 +62,7 @@ function synthesize(text) {
 
 def p(input):
 	str = ""
-	arr = pinyin(input, style=Style.TONE2)
+	arr = pinyin(input, style=Style.TONE3)
 	for i in arr:
 		str += i[0] + " "
 	return str
@@ -95,7 +95,7 @@ api = falcon.API()
 api.add_route("/",Res())
 api.add_route("/synthesize",Syn())
 
-simple_server.make_server("localhost",args.port,api).serve_forever()
+simple_server.make_server("localhost",int(args.port),api).serve_forever()
 
 
 
