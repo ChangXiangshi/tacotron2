@@ -71,6 +71,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint', default='pretrained/', help='Path to model checkpoint')
 parser.add_argument('--hparams', default='',help='Hyperparameter overrides as a comma-separated list of name=value pairs')
 parser.add_argument('--port', default=9000,help='Port of Http service')
+parser.add_argument('--host', default="localhost",help='Host of Http service')
 parser.add_argument('--name', help='Name of logging directory if the two models were trained together.')
 args = parser.parse_args()
 synth = Synthesizer()
@@ -87,15 +88,16 @@ class Syn:
 	def on_get(self,req,res):
 		if not req.params.get('text'):
 			raise falcon.HTTPBadRequest()
-		res.data = synth.live(p(req.params.get('text')))
+		res.data = synth.eval(p(req.params.get('text')))
 		res.content_type = "audio/wav"		
 		
 
 api = falcon.API()
 api.add_route("/",Res())
 api.add_route("/synthesize",Syn())
+print("host:{},port:{}".format(args.host,int(args.port)))
+simple_server.make_server(args.host,int(args.port),api).serve_forever()
 
-simple_server.make_server("localhost",int(args.port),api).serve_forever()
 
 
 

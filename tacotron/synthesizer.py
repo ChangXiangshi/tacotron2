@@ -150,7 +150,7 @@ class Synthesizer:
 
 		return saved_mels_paths, speaker_ids
 
-	def live(self, text):
+	def eval(self, text):
 		hparams = self._hparams
 		cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
 		seqs = [np.asarray(text_to_sequence(text, cleaner_names))]
@@ -159,7 +159,7 @@ class Synthesizer:
 			self.model.inputs: seqs,
 			self.model.input_lengths: np.asarray(input_lengths, dtype=np.int32),
 		}
-		linear_wavs, linears, mels, alignments = self.session.run([self.linear_wav_outputs, self.linear_outputs, self.mel_outputs, self.alignments], feed_dict=feed_dict)
+		linear_wavs = self.session.run(self.linear_wav_outputs, feed_dict=feed_dict)
 		wav = audio.inv_preemphasis(linear_wavs, hparams.preemphasis)
 		out = io.BytesIO()
 		audio.save_wav(wav, out ,sr=hparams.sample_rate)
