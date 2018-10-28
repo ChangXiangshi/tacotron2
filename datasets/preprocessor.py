@@ -9,6 +9,19 @@ from wavenet_vocoder.util import is_mulaw, is_mulaw_quantize, mulaw, mulaw_quant
 def rep(str):
     return str.replace('\\','/')
 
+# punctuate
+def duanju(zhText,pinyinText):
+	arr = pinyinText.split(" ")
+	result = " "
+	index = 0
+	for j in zhText:
+		if(j != ' ' and index < len(arr)):
+			result += arr[index] + " "
+			index += 1
+		else:
+			result += " "
+	return result
+
 def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12, tqdm=lambda x: x):
 	"""
 	Preprocesses the speech dataset from a gven input path to given output directories
@@ -38,20 +51,22 @@ def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12
 				basename = trn[:-4]
 				if basename.endswith('.wav'):
 					# THCHS30
-					f.readline()
+					zhText = f.readline()
 					wav_file = basename
 				else:
 					wav_file = basename + '.wav'
 				wav_path = wav_file
 				basename = basename.split('/')[-1]
-				text = f.readline().strip()
+				pinyinText = f.readline().strip()
+				text = duanju(zhText,pinyinText)
+				print(text)
 
 				mel_dir = rep(mel_dir)
 				linear_dir = rep(linear_dir)
 				wav_dir = rep(wav_dir)
 				wav_path = rep(wav_path)
 				basename = rep(basename)
-
+				
 				futures.append(executor.submit(partial(_process_utterance, mel_dir, linear_dir, wav_dir, basename, wav_path, text, hparams)))
 				index += 1
 
