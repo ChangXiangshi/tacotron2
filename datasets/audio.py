@@ -229,7 +229,6 @@ def _normalize(S, hparams):
 		else:
 			return np.clip(hparams.max_abs_value * ((S - hparams.min_level_db) / (-hparams.min_level_db)), 0, hparams.max_abs_value)
 
-	assert S.max() <= 0 and S.min() - hparams.min_level_db >= 0
 	if hparams.symmetric_mels:
 		return (2 * hparams.max_abs_value) * ((S - hparams.min_level_db) / (-hparams.min_level_db)) - hparams.max_abs_value
 	else:

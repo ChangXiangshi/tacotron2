@@ -42,7 +42,7 @@ hparams = tf.contrib.training.HParams(
 
 	#Mel and Linear spectrograms normalization/scaling and clipping
 	signal_normalization = True,
-	allow_clipping_in_normalization = True, #Only relevant if mel_normalization = True
+	allow_clipping_in_normalization = False, #Only relevant if mel_normalization = True
 	symmetric_mels = True, #Whether to scale the data to be symmetric around 0
 	max_abs_value = 4., #max absolute value of data. If symmetric, data will be [-max, max] else [0, max]
 	normalize_for_wavenet = True, #whether to rescale to [0, 1] for wavenet.
@@ -160,7 +160,7 @@ hparams = tf.contrib.training.HParams(
 	tacotron_zoneout_rate = 0.1, #zoneout rate for all LSTM cells in the network
 	tacotron_dropout_rate = 0.5, #dropout rate for all convolutional layers + prenet
 
-	tacotron_clip_gradients = False, #whether to clip gradients
+	tacotron_clip_gradients = True, #whether to clip gradients
 	natural_eval = False, #Whether to use 100% natural eval (to evaluate Curriculum Learning performance) or with same teacher-forcing ratio as in training (just for overfit)
 
 	#Decoder RNN learning can take be done in one of two ways:

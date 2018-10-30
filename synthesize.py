@@ -50,7 +50,7 @@ def main():
 	parser.add_argument('--name', help='Name of logging directory if the two models were trained together.')
 	parser.add_argument('--tacotron_name', help='Name of logging directory of Tacotron. If trained separately')
 	parser.add_argument('--wavenet_name', help='Name of logging directory of WaveNet. If trained separately')
-	parser.add_argument('--model', default='Tacotron-2')
+	parser.add_argument('--model', default='Tacotron')
 	parser.add_argument('--input_dir', default='training_data/', help='folder to contain inputs sentences/targets')
 	parser.add_argument('--mels_dir', default='tacotron_output/eval/', help='folder to contain mels to synthesize audio from using the Wavenet')
 	parser.add_argument('--output_dir', default='output/', help='folder to contain synthesized mel spectrograms')
