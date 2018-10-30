@@ -7,7 +7,7 @@ through Unidecode. For other data, you can modify _characters. See TRAINING_DATA
 
 _pad        = '_'
 _eos        = '~'
-_characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890@!\'(),-.:;? '
+_characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!\'(),-.:;? '
 
 # Export all symbols:
 symbols = [_pad, _eos] + list(_characters)
