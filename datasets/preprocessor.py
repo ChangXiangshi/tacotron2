@@ -6,11 +6,12 @@ import numpy as np
 from datasets import audio
 from wavenet_vocoder.util import is_mulaw, is_mulaw_quantize, mulaw, mulaw_quantize
 
-def rep(str):
+# for windows
+def replace(str):
     return str.replace('\\','/')
 
 # punctuate
-def duanju(zhText,pinyinText):
+def segment(zhText,pinyinText):
 	arr = pinyinText.split(" ")
 	result = " "
 	index = 0
@@ -45,28 +46,28 @@ def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12
 	futures = []
 	index = 1
 	for input_dir in input_dirs:
-		trn_files = glob.glob(os.path.join(input_dir,"data", '*.trn'))
+		trn_files = glob.glob(os.path.join(input_dir,"data", 'A*', '*.trn'))
 		for trn in trn_files:
 			with open(trn,encoding='utf-8') as f:
 				basename = trn[:-4]
+				text = None
 				if basename.endswith('.wav'):
 					# THCHS30
 					zhText = f.readline()
+					text = segment(zhText, pinyinText)
 					wav_file = basename
 				else:
 					wav_file = basename + '.wav'
 				wav_path = wav_file
 				basename = basename.split('/')[-1]
-				pinyinText = f.readline().strip()
-				text = duanju(zhText,pinyinText)
-				print(text)
+				text = text if text != None else f.readline().strip()
 
-				mel_dir = rep(mel_dir)
-				linear_dir = rep(linear_dir)
-				wav_dir = rep(wav_dir)
-				wav_path = rep(wav_path)
-				basename = rep(basename)
-				
+				mel_dir = replace(mel_dir)
+				linear_dir = replace(linear_dir)
+				wav_dir = replace(wav_dir)
+				wav_path = replace(wav_path)
+				basename = replace(basename)
+
 				futures.append(executor.submit(partial(_process_utterance, mel_dir, linear_dir, wav_dir, basename, wav_path, text, hparams)))
 				index += 1
 
@@ -166,9 +167,9 @@ def _process_utterance(mel_dir, linear_dir, wav_dir, index, wav_path, text, hpar
 	audio_filename = 'audio-{}.npy'.format(index)
 	mel_filename = 'mel-{}.npy'.format(index)
 	linear_filename ='linear-{}.npy'.format(index)
-	audio_filename_full = rep(os.path.join(wav_dir, audio_filename))
-	mel_filename_full = rep(os.path.join(mel_dir, mel_filename))
-	linear_filename_full = rep(os.path.join(linear_dir, linear_filename))
+	audio_filename_full = replace(os.path.join(wav_dir, audio_filename))
+	mel_filename_full = replace(os.path.join(mel_dir, mel_filename))
+	linear_filename_full = replace(os.path.join(linear_dir, linear_filename))
 
 	# Make dir
 	os.makedirs(os.path.dirname(audio_filename_full), exist_ok=True)
