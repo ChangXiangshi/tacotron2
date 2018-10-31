@@ -311,7 +311,7 @@ class Tacotron():
 
 						if hp.predict_linear:
 							#Compute linear loss
-							linear_loss = tf.losses.mean_squared_error(self.linear_targets, self.linear_outputs)
+							linear_loss = tf.losses.mean_squared_error(self.tower_linear_targets[i], self.tower_linear_outputs[i])
 						else:
 							linear_loss = 0.
 
