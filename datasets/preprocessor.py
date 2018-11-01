@@ -46,7 +46,7 @@ def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12
 	futures = []
 	index = 1
 	for input_dir in input_dirs:
-		trn_files = glob.glob(os.path.join(input_dir,"data", 'A*', '*.trn'))
+		trn_files = glob.glob(os.path.join(input_dir, "data", 'A*', '*.trn'))
 		for trn in trn_files:
 			with open(trn,encoding='utf-8') as f:
 				basename = trn[:-4]
@@ -54,6 +54,7 @@ def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12
 				if basename.endswith('.wav'):
 					# THCHS30
 					zhText = f.readline()
+					pinyinText = f.readline()
 					text = segment(zhText, pinyinText)
 					wav_file = basename
 				else:
