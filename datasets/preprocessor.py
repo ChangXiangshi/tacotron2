@@ -54,6 +54,7 @@ def build_from_path(hparams, input_dirs, mel_dir, linear_dir, wav_dir, n_jobs=12
 				if basename.endswith('.wav'):
 					# THCHS30
 					zhText = f.readline()
+					pinyinText = f.readline()
 					text = segment(zhText, pinyinText)
 					wav_file = basename
 				else:
