@@ -29,13 +29,14 @@ class Synthesizer:
 				self.model.initialize(inputs, input_lengths, targets, gta=gta, split_infos=split_infos)
 			else:
 				self.model.initialize(inputs, input_lengths, split_infos=split_infos)
+
 			self.mel_outputs = self.model.tower_mel_outputs
 			self.alignments = self.model.tower_alignments
 			self.stop_token_prediction = self.model.tower_stop_token_prediction
 			self.targets = targets
 			if hparams.predict_linear and not gta:
 				self.linear_outputs = self.model.tower_linear_outputs
-				self.linear_wav_outputs = audio.inv_spectrogram_tensorflow(self.model.linear_outputs[0], hparams)
+				self.linear_wav_outputs = audio.inv_spectrogram_tensorflow(self.model.tower_linear_outputs[0], hparams)
 
 		self.gta = gta
 		self._hparams = hparams
@@ -133,6 +134,7 @@ class Synthesizer:
 		else:
 			linear_wavs, linears, mels, alignments, stop_tokens = self.session.run([self.linear_wav_outputs, self.linear_outputs, self.mel_outputs, self.alignments, self.stop_token_prediction], feed_dict=feed_dict)
 			#Linearize outputs (1D arrays)
+			linear_wavs = [linear_wav for gpu_linear_wav in linear_wavs for linear_wav in gpu_linear_wav]
 			linears = [linear for gpu_linear in linears for linear in gpu_linear]
 			mels = [mel for gpu_mels in mels for mel in gpu_mels]
 			alignments = [align for gpu_aligns in alignments for align in gpu_aligns]
@@ -147,6 +149,7 @@ class Synthesizer:
 			mels = [mel[:target_length, :] for mel, target_length in zip(mels, target_lengths)]
 			linears = [linear[:target_length, :] for linear, target_length in zip(linears, target_lengths)]
 			assert len(mels) == len(linears) == len(texts)
+
 
 		if basenames is None:
 			#Generate wav and read it
@@ -186,31 +189,32 @@ class Synthesizer:
 
 			# Write the spectrogram to disk
 			# Note: outputs mel-spectrogram files and target ones have same names, just different folders
-			mel_filename = os.path.join(out_dir, 'mel-{:03d}.npy'.format(basenames[i]))
+			mel_filename = os.path.join(out_dir, 'mel-{}.npy'.format(basenames[i]))
 			np.save(mel_filename, mel, allow_pickle=False)
 			saved_mels_paths.append(mel_filename)
 
 			if log_dir is not None:
 				#save wav (mel -> wav)
 				# wav = audio.inv_mel_spectrogram(mel.T, hparams)
-				# audio.save_wav(wav, os.path.join(log_dir, 'wavs/wav-{:03d}-mel.wav'.format(basenames[i])), sr=hparams.sample_rate)
+				# audio.save_wav(wav, os.path.join(log_dir, 'wavs/wav-{}-mel.wav'.format(basenames[i])), sr=hparams.sample_rate)
 
 				#save alignments
-				# plot.plot_alignment(alignments[i], os.path.join(log_dir, 'plots/alignment-{:03d}.png'.format(basenames[i])),
-				# 	info='{}'.format(texts[i]), split_title=True)
+				# plot.plot_alignment(alignments[i], os.path.join(log_dir, 'plots/alignment-{}.png'.format(basenames[i])),
+				# 	title='{}'.format(texts[i]), split_title=True, max_len=target_lengths[i])
 
 				#save mel spectrogram plot
-				# plot.plot_spectrogram(mel, os.path.join(log_dir, 'plots/mel-{:03d}.png'.format(basenames[i])),
-				# 	info='{}'.format(texts[i]), split_title=True)
+				# plot.plot_spectrogram(mel, os.path.join(log_dir, 'plots/mel-{}.png'.format(basenames[i])),
+				# 	title='{}'.format(texts[i]), split_title=True)
 
 				if hparams.predict_linear:
 					#save wav (linear -> wav)
 					wav = audio.inv_preemphasis(linear_wavs, hparams.preemphasis)
-					audio.save_wav(wav, os.path.join(log_dir, 'wavs/wav-{:03d}-linear.wav'.format(basenames[i])), sr=hparams.sample_rate)
+					audio.save_wav(wav, os.path.join(log_dir, 'wavs/wav-{}-linear.wav'.format(basenames[i])), sr=hparams.sample_rate)
 
-					#save mel spectrogram plot
-					# plot.plot_spectrogram(linears[i], os.path.join(log_dir, 'plots/linear-{:03d}.png'.format(basenames[i])),
-					# 	info='{}'.format(texts[i]), split_title=True, auto_aspect=True)
+					#save linear spectrogram plot
+					# plot.plot_spectrogram(linears[i], os.path.join(log_dir, 'plots/linear-{}.png'.format(basenames[i])),
+					# 	title='{}'.format(texts[i]), split_title=True, auto_aspect=True)
+
 
 
 		return saved_mels_paths, speaker_ids
@@ -229,7 +233,7 @@ class Synthesizer:
 		out = io.BytesIO()
 		audio.save_wav(wav, out ,sr=hparams.sample_rate)
 		return out.getvalue()
-		
+
 	def _round_up(self, x, multiple):
 		remainder = x % multiple
 		return x if remainder == 0 else x + multiple - remainder

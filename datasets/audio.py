@@ -102,9 +102,9 @@ def inv_mel_spectrogram(mel_spectrogram, hparams):
 		processor = _lws_processor(hparams)
 		D = processor.run_lws(S.astype(np.float64).T ** hparams.power)
 		y = processor.istft(D).astype(np.float32)
-		return inv_preemphasis(y, hparams.preemphasis)
+		return inv_preemphasis(y, hparams.preemphasis, hparams.preemphasize)
 	else:
-		return inv_preemphasis(_griffin_lim(S ** hparams.power, hparams), hparams.preemphasis)
+		return inv_preemphasis(_griffin_lim(S ** hparams.power, hparams), hparams.preemphasis, hparams.preemphasize)
 
 def inv_spectrogram_tensorflow(spectrogram, hparams):
 	'''Builds computational graph to convert spectrogram to waveform using TensorFlow.
