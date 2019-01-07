@@ -93,7 +93,18 @@ hparams = tf.contrib.training.HParams(
 	allow_clipping_in_normalization = False, #Only relevant if mel_normalization = True
 	symmetric_mels = True, #Whether to scale the data to be symmetric around 0. (Also multiplies the output range by 2, faster and cleaner convergence)
 	max_abs_value = 4., #max absolute value of data. If symmetric, data will be [-max, max] else [0, max] (Must not be too big to avoid gradient explosion, 
-																										  #not too small for fast convergence)
+	
+	 #Global style token
+	use_gst=True,     # When false, the scripit will do as the paper  "Towards End-to-End Prosody Transfer for Expressive Speech Synthesis with Tacotron"
+	num_gst=10,
+	num_heads=4,       # Head number for multi-head attention
+	style_embed_depth=256,
+	reference_filters=[32, 32, 64, 64, 128, 128],
+	reference_depth=128,
+	style_att_type="mlp_attention", # Attention type for style attention module (dot_attention, mlp_attention)
+	style_att_dim=128,
+
+																									  #not too small for fast convergence)
 	normalize_for_wavenet = True, #whether to rescale to [0, 1] for wavenet. (better audio quality)
 	clip_for_wavenet = True, #whether to clip [-max, max] before training/synthesizing with wavenet (better audio quality)
 
@@ -136,7 +147,7 @@ hparams = tf.contrib.training.HParams(
 	prenet_layers = [256, 256], #number of layers and number of units of prenet
 	decoder_layers = 2, #number of decoder lstm layers
 	decoder_lstm_units = 1024, #number of decoder lstm units on each layer
-	max_iters = 2000, #Max decoder steps during inference (Just for safety from infinite loop cases)
+	max_iters = 3000, #Max decoder steps during inference (Just for safety from infinite loop cases)
 
 	#Residual postnet
 	postnet_num_layers = 5, #number of postnet convolutional layers
