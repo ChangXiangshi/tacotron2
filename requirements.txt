@@ -18,4 +18,3 @@ lxml
 pydub
 chardet
 requests
-tensorflow
