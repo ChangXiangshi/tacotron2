@@ -8,6 +8,7 @@ from tensorflow.contrib.seq2seq import dynamic_decode
 from tacotron.models.Architecture_wrappers import TacotronEncoderCell, TacotronDecoderCell
 from tacotron.models.custom_decoder import CustomDecoder
 from tacotron.models.attention import LocationSensitiveAttention
+from tacotron.utils.ops import shape_list
 
 import numpy as np
 
@@ -27,7 +28,7 @@ class Tacotron():
 		self._hparams = hparams
 
 	def initialize(self, inputs, input_lengths, mel_targets=None, stop_token_targets=None, linear_targets=None, targets_lengths=None, gta=False,
-			global_step=None, is_training=False, is_evaluating=False, split_infos=None):
+			global_step=None, is_training=False, is_evaluating=False, split_infos=None, reference_mel=None):
 		"""
 		Initializes the model for inference
 		sets "mel_outputs" and "alignments" fields.

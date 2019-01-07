@@ -3,13 +3,13 @@ import os
 import re
 import time
 from time import sleep
-
+from datasets import audio
 import tensorflow as tf
 from hparams import hparams, hparams_debug_string
 from infolog import log
 from tacotron.synthesizer import Synthesizer
 from tqdm import tqdm
-
+import numpy as np
 
 def generate_fast(model, text):
 	model.synthesize(text, None, None, None, None)
@@ -54,17 +54,24 @@ def run_eval(args, checkpoint_path, output_dir, hparams, sentences):
 
 	log(hparams_debug_string())
 	synth = Synthesizer()
-	synth.load(checkpoint_path, hparams)
+	synth.load(checkpoint_path, hparams, reference_mel=args.reference_audio)
+	if args.reference_audio is not None:
+		ref_wav = audio.load_wav(args.reference_audio)
+		reference_mel = audio.melspectrogram(ref_wav).astype(np.float32).T
+	else:
+		raise ValueError("Evaluation without reference audio. Please provide path to reference audio.")
+	
 
 	#Set inputs batch wise
 	sentences = [sentences[i: i+hparams.tacotron_synthesis_batch_size] for i in range(0, len(sentences), hparams.tacotron_synthesis_batch_size)]
 
+	
 	log('Starting Synthesis')
 	with open(os.path.join(eval_dir, 'map.txt'), 'w') as file:
 		for i, texts in enumerate(tqdm(sentences)):
 			start = time.time()
 			basenames = ['batch_{:03d}_sentence_{:03d}'.format(i, j) for j in range(len(texts))]
-			mel_filenames, speaker_ids = synth.synthesize(texts, basenames, eval_dir, log_dir, None)
+			mel_filenames, speaker_ids = synth.synthesize(texts, basenames, eval_dir, log_dir, None, reference_mel=reference_mel)
 
 			for elems in zip(texts, mel_filenames, speaker_ids):
 				file.write('|'.join([str(x) for x in elems]) + '\n')

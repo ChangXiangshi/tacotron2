@@ -16,19 +16,22 @@ from tacotron.utils.text import text_to_sequence
 
 
 class Synthesizer:
-	def load(self, checkpoint_path, hparams, gta=False, model_name='Tacotron'):
+	def load(self, checkpoint_path, hparams, gta=False, model_name='Tacotron',reference_mel = None):
 		log('Constructing model: %s' % model_name)
 		#Force the batch size to be known in order to use attention masking in batch synthesis
 		inputs = tf.placeholder(tf.int32, (None, None), name='inputs')
 		input_lengths = tf.placeholder(tf.int32, (None), name='input_lengths')
 		targets = tf.placeholder(tf.float32, (None, None, hparams.num_mels), name='mel_targets')
+		if reference_mel is not None:
+			reference_mel = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'reference_mel')
+
 		split_infos = tf.placeholder(tf.int32, shape=(hparams.tacotron_num_gpus, None), name='split_infos')
 		with tf.variable_scope('Tacotron_model') as scope:
 			self.model = create_model(model_name, hparams)
 			if gta:
-				self.model.initialize(inputs, input_lengths, targets, gta=gta, split_infos=split_infos)
+				self.model.initialize(inputs, input_lengths, targets, gta=gta, split_infos=split_infos, reference_mel=reference_mel)
 			else:
-				self.model.initialize(inputs, input_lengths, split_infos=split_infos)
+				self.model.initialize(inputs, input_lengths, split_infos=split_infos, reference_mel=reference_mel)
 
 			self.mel_outputs = self.model.tower_mel_outputs
 			self.alignments = self.model.tower_alignments
@@ -67,7 +70,7 @@ class Synthesizer:
 		saver.restore(self.session, checkpoint_path)
 
 
-	def synthesize(self, texts, basenames, out_dir, log_dir, mel_filenames):
+	def synthesize(self, texts, basenames, out_dir, log_dir, mel_filenames, reference_mel=None):
 		hparams = self._hparams
 		cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
 
@@ -97,7 +100,11 @@ class Synthesizer:
 			self.inputs: input_seqs,
 			self.input_lengths: np.asarray(input_lengths, dtype=np.int32),
 		}
-
+		
+		if reference_mel is not None:
+			reference_mel = np.expand_dims(reference_mel, 0)
+			feed_dict.update({self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32)})
+		
 		if self.gta:
 			np_targets = [np.load(mel_filename) for mel_filename in mel_filenames]
 			target_lengths = [len(np_target) for np_target in np_targets]
