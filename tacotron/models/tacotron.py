@@ -10,6 +10,7 @@ from tacotron.models.custom_decoder import CustomDecoder
 from tacotron.models.attention import LocationSensitiveAttention
 from tacotron.utils.ops import shape_list
 from .modules import reference_encoder
+from .multihead_attention import MultiheadAttention
 
 import numpy as np
 
