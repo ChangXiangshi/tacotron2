@@ -132,10 +132,11 @@ class Tacotron():
 
 					#For shape visualization purpose
 					enc_conv_output_shape = encoder_cell.conv_output_shape
-
+					print("reference_mel start",reference_mel)
 					if is_training:
 						reference_mel = mel_targets
-
+						print("reference_mel set",reference_mel)
+					print("reference_mel end",reference_mel)
 					if reference_mel is not None:
 						# Reference encoder
 						refnet_outputs = reference_encoder(
