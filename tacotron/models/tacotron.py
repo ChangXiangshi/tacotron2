@@ -9,6 +9,7 @@ from tacotron.models.Architecture_wrappers import TacotronEncoderCell, TacotronD
 from tacotron.models.custom_decoder import CustomDecoder
 from tacotron.models.attention import LocationSensitiveAttention
 from tacotron.utils.ops import shape_list
+from .modules import reference_encoder
 
 import numpy as np
 
