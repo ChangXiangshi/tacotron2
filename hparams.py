@@ -304,7 +304,12 @@ hparams = tf.contrib.training.HParams(
 
 	#Eval sentences (if no eval text file was specified during synthesis, these sentences are used for eval)
 	sentences = [
-	"ba1 bai3 biao1 bing1 ben1 bei3 po1 pao4 bing1 bing4 pai2 bei3 bian1 pao3 pao4 bing1 pa4 ba3 biao1 bing1 peng4 biao1 bing1 pa4 peng4 pao4 bing1 pao4 ba1 le bai3 le biao1 le bing1 le ben1 le bei3 le po1 pao4 le bing1 le bing4 le pai2 le bei3 le bian1 le pao3 pao4 le bing1 le pa4 le ba3 le biao1 le bing1 le peng4 biao1 le bing1 le pa4 le peng4 le pao4 le bing1 le pao4",
+		"meng2 yuan1 A er4 shi2 ba1 nian2 A liu2 zhong1 lin2 A huo4 A si4 bai3 A liu4 shi2 A wan4 yuan2 A guo2 jia1 pei2 chang2 E",
+		"yuan2 yin3 A tai4 guo2 A man4 gu3 A you2 bao4 A xiao1 xi1 D zhe4 liang4 A shuang1 ceng2 A ba1 shi4 A chu1 A shi4 gu4 D zhu3 yao4 A shi4 yin1 wei4 A che1 nei4 A si1 ji1 A wei4 le A bi4 mian3 A zhuang4 ji1 A qian2 fang1 A ke4 che1 D ji2 A cai3 sha1 che1 E",
+		"cai2 A dao3 zhi4 A ba1 shi4 A zai4 A yu3 A zhong1 A fan1 fu4 A dao4 A gao1 su4 gong1 lu4 A pang2 de A cao3 cong2 A zhong1 E",
+		"dang1 di4 A jing3 fang1 A biao3 shi4 D mu4 qian2 A zao4 cheng2 A zhi4 shao3 A liu4 ren2 A si3 wang2 D bao1 kuo4 A yi1 ming2 A nan2 xing4 A cheng2 ke4 D si4 ming2 A nv3 cheng2 ke4 D yi3 ji2 A yi1 ming2 A nv3 ying1 D jin4 A wu3 shi2 A ren2 A shou4 shang1 E",
+		"shang1 zhe3 A yi3 A jin3 ji2 A song4 A zhi4 A lin2 jin4 A yi1 yuan4 A qiang3 jiu4 E",
+		"jing3 fang1 A hai2 zai4 A diao4 cha2 A shi4 gu4 A yuan2 yin1 E"
 	]
 
 	)

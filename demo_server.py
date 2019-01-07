@@ -270,6 +270,7 @@ class Res:
 
 class SynMp3:
   def on_get(self,req,resp):
+    t1 = time.time()
     if not req.params.get('text'):
       raise falcon.HTTPBadRequest()
     content = req.params.get('text')
@@ -282,6 +283,8 @@ class SynMp3:
     resp.status = falcon.HTTP_200
     resp.body = json.dumps(result)
     resp.content_length = len(resp.body)
+    t2 = time.time()
+    print("cost synMp3 ",t2-t1)
 
 class Read:
     def on_get(self,req,resp):
@@ -315,6 +318,7 @@ class Read:
 
 class Syn:
   def on_get(self,req,resp):
+    t1 = time.time()
     if not req.params.get('text'):
       raise falcon.HTTPBadRequest()
     content = req.params.get('text')
@@ -326,7 +330,8 @@ class Syn:
     resp.status = falcon.HTTP_200
     resp.data = out
     resp.content_type = "audio/mp3"
-    
+    t2 = time.time()
+    print("cost syn ",t2-t1)
 
 
 api = falcon.API()

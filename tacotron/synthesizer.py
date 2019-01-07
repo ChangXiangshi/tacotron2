@@ -247,7 +247,7 @@ class Synthesizer:
 		#linear_wavs = self.session.run(self.linear_wav_outputs, feed_dict=feed_dict)
 		linear_wavs, linears, mels, alignments, stop_tokens = self.session.run([self.linear_wav_outputs, self.linear_outputs, self.mel_outputs, self.alignments, self.stop_token_prediction], feed_dict=feed_dict)
 		linear_wavs = [linear_wav for gpu_linear_wav in linear_wavs for linear_wav in gpu_linear_wav]
-	
+
 		wav = audio.inv_preemphasis(linear_wavs, hparams.preemphasis)
 		#audio.save_wav(wav, 'wavs/wav-1-linear.wav', sr=hparams.sample_rate)
 
