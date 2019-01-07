@@ -158,23 +158,23 @@ class Tacotron():
 						else:
 							style_embeddings = tf.expand_dims(refnet_outputs, axis=1)                   # [N, 1, 128]
 					else:
-						print("Use random weight for GST.")
-						random_weights = tf.random_uniform([hp.num_heads, hp.num_gst], maxval=1.0, dtype=tf.float32)
-						random_weights = tf.nn.softmax(random_weights, name="random_weights")
-						style_embeddings = tf.matmul(random_weights, tf.nn.tanh(gst_tokens))
-						style_embeddings = tf.reshape(style_embeddings, [1, 1] + [hp.num_heads * gst_tokens.get_shape().as_list()[1]])
+						if hp.use_gst:
+							print("Use random weight for GST.")
+							random_weights = tf.random_uniform([hp.num_heads, hp.num_gst], maxval=1.0, dtype=tf.float32)
+							random_weights = tf.nn.softmax(random_weights, name="random_weights")
+							style_embeddings = tf.matmul(random_weights, tf.nn.tanh(gst_tokens))
+							style_embeddings = tf.reshape(style_embeddings, [1, 1] + [hp.num_heads * gst_tokens.get_shape().as_list()[1]])
 					
 
 					#Extend style embeddings to be compatible with encoder_outputs. 
 					#Make encoder_output's dimensions by concatenating style embeddings with a vector of all zeroes.
 					#Preserves effect of both style and encoder_outputs.
-					neg = tf.add(style_embeddings, tf.negative(style_embeddings))
-					style_embeddings = tf.concat([style_embeddings, neg], axis=-1)
-
-
-					# Add style embedding to every text encoder state
-					style_embeddings = tf.tile(style_embeddings, [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in, 128]
-					encoder_outputs = tf.add(encoder_outputs, style_embeddings)   
+					if hp.use_gst:
+						neg = tf.add(style_embeddings, tf.negative(style_embeddings))
+						style_embeddings = tf.concat([style_embeddings, neg], axis=-1)
+						# Add style embedding to every text encoder state
+						style_embeddings = tf.tile(style_embeddings, [1, shape_list(encoder_outputs)[1], 1]) # [N, T_in, 128]
+						encoder_outputs = tf.add(encoder_outputs, style_embeddings)   
 
 					#Decoder Parts
 					#Attention Decoder Prenet
