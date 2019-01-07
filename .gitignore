@@ -108,3 +108,5 @@ logs-*/
 training_data/
 
 logs
+tacotron_output
+wavs
