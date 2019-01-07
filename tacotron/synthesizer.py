@@ -53,7 +53,7 @@ class Synthesizer:
 		self.input_lengths = input_lengths
 		self.targets = targets
 		self.split_infos = split_infos
-
+		
 		log('Loading checkpoint: %s' % checkpoint_path)
 		#Memory allocation on the GPUs as needed
 		config = tf.ConfigProto()
@@ -223,16 +223,37 @@ class Synthesizer:
 		hparams = self._hparams
 		cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
 		seqs = [np.asarray(text_to_sequence(text, cleaner_names))]
+	
 		input_lengths = [len(seq) for seq in seqs]
+
+		size_per_device = len(seqs) // self._hparams.tacotron_num_gpus
+
+		#Pad inputs according to each GPU max length
+		input_seqs = None
+		split_infos = []
+		for i in range(self._hparams.tacotron_num_gpus):
+			device_input = seqs[size_per_device*i: size_per_device*(i+1)]
+			device_input, max_seq_len = self._prepare_inputs(device_input)
+			input_seqs = np.concatenate((input_seqs, device_input), axis=1) if input_seqs is not None else device_input
+			split_infos.append([max_seq_len, 0, 0, 0])
+
 		feed_dict = {
-			self.model.inputs: seqs,
-			self.model.input_lengths: np.asarray(input_lengths, dtype=np.int32),
+			self.inputs: input_seqs,
+			self.input_lengths: np.asarray(input_lengths, dtype=np.int32),
 		}
-		linear_wavs = self.session.run(self.linear_wav_outputs, feed_dict=feed_dict)
+
+		feed_dict[self.split_infos] = np.asarray(split_infos, dtype=np.int32)
+
+		#linear_wavs = self.session.run(self.linear_wav_outputs, feed_dict=feed_dict)
+		linear_wavs, linears, mels, alignments, stop_tokens = self.session.run([self.linear_wav_outputs, self.linear_outputs, self.mel_outputs, self.alignments, self.stop_token_prediction], feed_dict=feed_dict)
+		linear_wavs = [linear_wav for gpu_linear_wav in linear_wavs for linear_wav in gpu_linear_wav]
+	
 		wav = audio.inv_preemphasis(linear_wavs, hparams.preemphasis)
+		#audio.save_wav(wav, 'wavs/wav-1-linear.wav', sr=hparams.sample_rate)
+
 		out = io.BytesIO()
 		audio.save_wav(wav, out ,sr=hparams.sample_rate)
-		return out.getvalue()
+		return out.getvalue(),wav
 
 	def _round_up(self, x, multiple):
 		remainder = x % multiple

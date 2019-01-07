@@ -22,6 +22,7 @@ import mimetypes
 from subprocess import Popen, PIPE
 import pyaudio
 from web_html import isWebUrl,get_article
+import time
 
 html_body = '''<html><title>Tcotron-2 Demo</title><meta charset='utf-8'>
 <style>
@@ -173,6 +174,7 @@ modified_hp = hparams.parse(args.hparams)
 synth.load(args.checkpoint, modified_hp)
 
 def gen(content,t):
+  t1 = time.time()
   out = io.BytesIO()
   output = np.array([])
   mhash = hashlib.md5(content.encode(encoding='UTF-8')).hexdigest()
@@ -180,17 +182,20 @@ def gen(content,t):
   content = cn2pinyin(content)
   print(len(content))
   ts = content.split("E")
+  t2 = time.time()
   for text in ts:
     text = text.strip()
     if len(text) <= 0:
       continue
     text += " E"
-    print(">>>>>"+text)
+    st1 = time.time()
     data,wav = synth.eval(text)
+    st2 = time.time()
+    print(">>>>>"+text,"cost=",st2-st1)
     output = np.append(output, wav, axis=0)
-  
+  t3 = time.time()
   audio.save_wav(output,out, hparams.sample_rate)
-
+  t4 = time.time()
   if t == "g1":
     mp3_path = "wavs/"+mhash + ".mp3"
     song = AudioSegment.from_file(out, format='wav')
@@ -198,9 +203,12 @@ def gen(content,t):
     song.set_channels(2)
     filter = "atempo=0.95,highpass=f=300,lowpass=f=3000,aecho=0.8:0.88:6:0.4"
     song.export(mp3_path, format="mp3",parameters=["-filter_complex",filter,"-q:a", "4", "-vol", "150"])
+    t5 = time.time()
     out2 = io.BytesIO()
     song.export(out2, format="mp3",parameters=["-filter_complex",filter,"-q:a", "4", "-vol", "150"])
     data = out2.getvalue()
+    t6 = time.time()
+    print("gen cost",t2-t1,t3-t2,t4-t3,t5-t4,t6-t5)
     return mp3_path, data
   else:
     effect ="-rate=-5 -pitch=+4"
