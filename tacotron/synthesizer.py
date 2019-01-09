@@ -22,8 +22,8 @@ class Synthesizer:
 		inputs = tf.placeholder(tf.int32, (None, None), name='inputs')
 		input_lengths = tf.placeholder(tf.int32, (None), name='input_lengths')
 		targets = tf.placeholder(tf.float32, (None, None, hparams.num_mels), name='mel_targets')
-		if reference_mel is not None:
-			reference_mel = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'reference_mel')
+		
+		reference_mel = tf.placeholder(tf.float32, [1, None, hparams.num_mels], 'reference_mel')
 
 		split_infos = tf.placeholder(tf.int32, shape=(hparams.tacotron_num_gpus, None), name='split_infos')
 		with tf.variable_scope('Tacotron_model') as scope:
@@ -103,7 +103,7 @@ class Synthesizer:
 		
 		if reference_mel is not None:
 			reference_mel = np.expand_dims(reference_mel, 0)
-			feed_dict.update({self.model.reference_mel: np.asarray(reference_mel, dtype=np.float32)})
+			feed_dict.update({self.reference_mel: np.asarray(reference_mel, dtype=np.float32)})
 		
 		if self.gta:
 			np_targets = [np.load(mel_filename) for mel_filename in mel_filenames]
