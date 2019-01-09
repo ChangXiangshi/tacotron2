@@ -22,8 +22,8 @@ class Synthesizer:
 		inputs = tf.placeholder(tf.int32, (None, None), name='inputs')
 		input_lengths = tf.placeholder(tf.int32, (None), name='input_lengths')
 		targets = tf.placeholder(tf.float32, (None, None, hparams.num_mels), name='mel_targets')
-		
-		reference_mel = tf.placeholder(tf.float32, (1, None, hparams.num_mels), name='reference_mel')
+		if reference_mel is not None:
+			reference_mel = tf.placeholder(tf.float32, (1, None, hparams.num_mels), name='reference_mel')
 
 		split_infos = tf.placeholder(tf.int32, shape=(hparams.tacotron_num_gpus, None), name='split_infos')
 		with tf.variable_scope('Tacotron_model') as scope:
@@ -54,6 +54,7 @@ class Synthesizer:
 
 		self.inputs = inputs
 		self.input_lengths = input_lengths
+		self.reference_mel = reference_mel
 		self.targets = targets
 		self.split_infos = split_infos
 		
