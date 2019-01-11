@@ -59,8 +59,9 @@ def run_eval(args, checkpoint_path, output_dir, hparams, sentences):
 		ref_wav = audio.load_wav(args.reference_audio,sr=hparams.sample_rate)
 		reference_mel = audio.melspectrogram(ref_wav,hparams).astype(np.float32).T
 	else:
-		raise ValueError("Evaluation without reference audio. Please provide path to reference audio.")
-	synth.load(checkpoint_path, hparams, reference_mel=args.reference_audio)
+		#raise ValueError("Evaluation without reference audio. Please provide path to reference audio.")
+		reference_mel = None
+	synth.load(checkpoint_path, hparams, reference_mel=reference_mel)
 
 	#Set inputs batch wise
 	sentences = [sentences[i: i+hparams.tacotron_synthesis_batch_size] for i in range(0, len(sentences), hparams.tacotron_synthesis_batch_size)]
