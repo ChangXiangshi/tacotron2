@@ -163,6 +163,7 @@ class Tacotron():
 							print("Use random weight for GST.")
 							random_weights = tf.random_uniform([hp.num_heads, hp.num_gst], maxval=1.0, dtype=tf.float32)
 							random_weights = tf.nn.softmax(random_weights, name="random_weights")
+							print("random_weights:",random_weights)
 							style_embeddings = tf.matmul(random_weights, tf.nn.tanh(gst_tokens))
 							style_embeddings = tf.reshape(style_embeddings, [1, 1] + [hp.num_heads * gst_tokens.get_shape().as_list()[1]])
 					
