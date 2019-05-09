@@ -406,10 +406,13 @@ def txt2label(txt):
             for word in cutstrpos(content):
                 words.append(word.strip())
                 words.append("#0")
+                #words.append("")
             words.pop()
             words.append("#3")
+            #words.append("")
         words.pop()
         words.append("#4")
+        #words.append("")
     return "".join(words)
 
 def p(input):
@@ -453,6 +456,26 @@ def cn_format(content):
         contents.append(preSplit)
     return contents
 
+
+def replace_symbol(content):
+    result = pinyin(content, style=Style.TONE3)
+    txt = ""
+    for i in result:
+        if i[0] == "，" or i[0] == "、":
+            txt += " "+" "
+        elif i[0] == "。" or i[0] == "!" or i[0] == "“" or i[0] == "”":
+            continue
+        else:
+            txt += i[0] + " "
+    return txt
+
+def process_phone(string):
+    str_list = list(string.split(" "))
+    for i in range(len(str_list)):
+        if(str_list[i].isalpha() and str_list[i].islower()):
+            str_list[i] += '5'
+    return " ".join(str_list)
+
 def cn2pinyin(content):
     contents = cn_format(content)
 
@@ -463,8 +486,11 @@ def cn2pinyin(content):
         txt = txt2label(txt)
         txt = replaceTag(txt)
         txt = p(txt)
+        #txt = replace_symbol(txt)
         result.append(txt)
-    return "".join(result)
+        string = "".join(result)
+    return process_phone(string)
+
 
 def process_biaobei(input_dir):
     trn_files = glob.glob(os.path.join(input_dir, "data", '*.txt'))
@@ -501,8 +527,9 @@ if __name__ == "__main__":
     # print(num2chinese("2418.91", twoalt=True))
     content = "北斗系统是中国自主建设、独立运行，与世界其他卫星导航系统兼容共用的全球卫星导航系统，可在全球范围，全天候、全天时，为各类用户提供高精度、高可靠的定位、导航、授时服务。自上世纪90年代开始，北斗系统启动研制，按“三步走”发展战略，先有源后无源，先区域后全球，先后建成北斗一号、北斗二号、北斗三号系统，走出了一条中国特色的卫星导航系统建设道路。"
     content =cn2pinyin(content)
-    ts = content.split("E")
-    for text in ts:
-        print(text)
+    print(content)
+    #ts = content.split("E")
+    #for text in ts:
+     #   print(text)
     # process_biaobei("data_thchs30")
     # process_thcns("data_thchs30")
